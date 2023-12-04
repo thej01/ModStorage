@@ -1,0 +1,2 @@
+add chaosblast.hmm
+add mod.ini

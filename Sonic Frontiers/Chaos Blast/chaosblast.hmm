@@ -1,0 +1,251 @@
+Code "Chaos Blast" by "thej01" in "thej01's codes/Gameplay" does 
+/*
+Adds Chaos Blast to the game as a move that can be performed when Phantom Rush is on by pressing the Cyloop button during a parry, then releasing the parry.
+\nThis will drain rings, so be careful.
+\nIncreasing your combo will make the move recharge faster.
+\nOnly sonic can use this move.
+*/
+
+//
+    #include "Reflection" noemit
+
+    #import "GOComponents"
+    #import "PlayerVisuals"
+
+	#lib "BlackboardItem"
+	#lib "BlackboardBattle"
+    #lib "BlackboardStatus"
+    #lib "SonicParameters"
+	#lib "Sonic"
+    #lib "Player"
+    #lib "Reflection"
+
+
+    // do not touch
+    static float CollisionTimer = 0;
+    static float Cooldown = 0;
+    static float RingDecreaseTimer = 0;
+    static float ResetDamageTimer = 0;
+    static float OldDamage = 0;
+
+    static int RingsToDecrease = 0;
+    static int LastComboCount = 0;
+
+    static bool QueueBlast = false;
+    static bool cemtsRan = false;
+    static bool ResetDamage = false;
+
+    var SonicParametersInfo = Reflection.GetDataInfo<SonicParameters.Root>("player_common");
+
+    // cool stuff to mess with
+
+    // range when using Chaos Blast
+
+    const float ChaosBlastRange = 85.0f;
+    const float ChaosBlastRangeSS1 = 135.0f;
+    const float ChaosBlastRangeSS2 = 200.0f;
+
+    // cooldown after using Chaos Blast
+    const float ChaosBlastCooldownLength = 30.0f; // 60 seconds
+    const float ChaosBlastCooldownLengthSS1 = 42.5f; // 85 seconds
+    const float ChaosBlastCooldownLengthSS2 = 40.0f; // 80 seconds
+
+    // multiplier for getting a hit to decrease Cooldown
+
+    const float ChaosBlastCooldownComboMult = 1.2f;
+    const float ChaosBlastCooldownComboMultSS1 = 1.4f;
+    const float ChaosBlastCooldownComboMultSS2 = 1.4f;
+
+    // damage multiplier when using Chaos Blast
+    
+    const float ChaosBlastDamageMultiplier = 20f;
+    const float ChaosBlastDamageMultiplierSS1 = 6f; 
+    const float ChaosBlastDamageMultiplierSS2 = 8f;
+
+    // amount of rings to drain when using Chaos Blast
+
+    const int ChaosBlastCost = 75;
+    const int ChaosBlastCostSS1 = 50;
+    const int ChaosBlastCostSS2 = 35;
+
+//
+{
+
+    var pBlackboardItem = BlackboardItem.Get();
+    var pBlackboardBattle = BlackboardBattle.Get();
+
+    bool isSuper = BlackboardStatus.IsSuper();
+    bool isSS2 = false;
+
+    float rangeToUse = ChaosBlastRange;
+    float cooldownLengthToUse = ChaosBlastCooldownLength;
+    float damageMultToUse = ChaosBlastDamageMultiplier;
+    float comboMultToUse = ChaosBlastCooldownComboMult;
+    int costToUse = ChaosBlastCost; 
+
+    float DeltaTime = Time.GetDeltaTime();
+
+    // detect if we are SS2
+
+    if (Player.GetPlayerType() != Player.PlayerType.Sonic)
+	    return;
+
+    var data = Player.GetPlayerData();
+	if (data == null)
+		return;
+
+	var gocVisual = GameObject.GetGOC<GOCPlayerVisual>(&data->GameObject);
+	if (gocVisual == null)
+		return;
+
+	var visual = gocVisual->GetVisual<VisualSuperSonic>();
+	if (visual != null)
+        isSS2 = visual->IsSuperSonic2;
+
+    // set the correct stats for each form
+
+    if (isSuper)
+    {
+        rangeToUse = ChaosBlastRangeSS1;
+        cooldownLengthToUse = ChaosBlastCooldownLengthSS1;
+        damageMultToUse = ChaosBlastDamageMultiplierSS1;
+        comboMultToUse = ChaosBlastCooldownComboMultSS1;
+        costToUse = ChaosBlastCostSS1;
+    }
+
+    if (isSS2)
+    {
+        rangeToUse = ChaosBlastRangeSS2;
+        cooldownLengthToUse = ChaosBlastCooldownLengthSS2;
+        damageMultToUse = ChaosBlastDamageMultiplierSS2;
+        comboMultToUse = ChaosBlastCooldownComboMultSS2;
+        costToUse = ChaosBlastCostSS2;
+    }   
+
+	if (pBlackboardItem == null)
+        return;
+
+    if (pBlackboardBattle == null)
+        return;
+
+    bool hasEnoughRings = pBlackboardItem->RingCount >= costToUse;
+    bool isParry = Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateParry;
+    bool LeftBumperDown = Player.Input.IsDown(Player.InputActionType.PlayerLeftStep);
+    bool RightBumperDown = Player.Input.IsDown(Player.InputActionType.PlayerRightStep)
+    bool CyloopDown = Player.Input.IsDown(Player.InputActionType.PlayerCyloop)
+    // queue the BLAST
+    if (isParry && Cooldown <= 0 && hasEnoughRings && CyloopDown)
+    {
+        QueueBlast = true;
+    }
+    else
+    {
+        // only disable the blast and effects if we arent parrying
+        if (!isParry)
+        {
+            QueueBlast = false;
+            cemtsRan = false;
+        }
+    }
+
+    // effects
+
+    if (QueueBlast)
+    {
+        if (!cemtsRan)
+        {
+            Player.Effect.PlayEffect("Chaos Blast Charge", "ef_so_cyloop_attract_hit01")
+            Player.Effect.PlayEffect("Chaos Blast Charge", "ef_so_pow_boost_impact_fv017")
+        }
+        cemtsRan = true;
+    }
+    else
+    {
+        Player.Effect.StopEffect("Chaos Blast Charge")
+    }
+
+    // check if the player let go of parry
+
+    if ((!isParry || !LeftBumperDown || !RightBumperDown))
+    {
+        // FO-SO-RO-DAH!
+        // oops, wrong franchise
+        if (QueueBlast)
+        {
+            QueueBlast = false;
+            ResetDamage = true;
+            Cooldown = cooldownLengthToUse;
+            RingsToDecrease = costToUse;
+            ResetDamageTimer = 0.032f;
+
+            OldDamage = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.damageRate);
+
+            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.damageRate, OldDamage * damageMultToUse);
+
+            Player.Collision.SetCollisionSphere(Player.CollisionType.Damage, rangeToUse);
+
+            // cemts
+            Player.Effect.PlayEffect("Chaos Blast Released", "ef_so_parry01_counter") // tiny particles
+            Player.Effect.PlayEffect("Chaos Blast Released", "ef_so_boost_impact_sv01") // big particles
+            Player.Effect.PlayEffect("Chaos Blast Released", "ef_so_boost_impact_fv01") // wind effect
+            Player.Effect.PlayEffect("Chaos Blast Released", "ef_ss_aura01_burst01") // some yellow particles
+            Player.Effect.PlayEffect("Chaos Blast Released", "ec_ss2_bo6160_burst01_wave01") // tiny yellow circle
+            if (isSuper && !isSS2)
+                Player.Effect.PlayEffect("Chaos Blast Released", "ef_ss_hit_special01") // yellow explosion
+
+            if (isSS2)
+            {
+                Player.Effect.PlayEffect("Chaos Blast Released", "ef_ss2_bo6160_burst02") // giant red and yellow explosion
+            }
+            Player.Effect.StopEffect("Chaos Blast Charge")
+        }
+    }
+
+    if (ResetDamageTimer <= 0)
+    {
+        if (ResetDamage)
+        {
+            ResetDamage = false;
+            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.damageRate, OldDamage);
+            Player.Collision.SetCollisionSphere(Player.CollisionType.Default, 1.0f);
+        }
+    }
+
+    if (ResetDamageTimer > 0)
+        ResetDamageTimer -= DeltaTime;
+
+    // decrement cooldown
+
+    if (Cooldown >= 0)
+    {
+        // decrease cooldown based on combo count
+        int comboCountDifference = pBlackboardBattle->ComboCount - LastComboCount;
+
+        if (comboCountDifference < 0)
+            comboCountDifference = 0;
+
+        float cooldownMult = 1 + (comboCountDifference * comboMultToUse);
+        Cooldown -= cooldownMult * DeltaTime;
+        LastComboCount = pBlackboardBattle->ComboCount;
+    }
+
+    // decrease rings
+    if (RingsToDecrease > 0)
+    {
+        RingDecreaseTimer += DeltaTime;
+
+        if (RingDecreaseTimer > 0.032f)
+        {
+            pBlackboardItem->RingCount -= 1;
+            RingsToDecrease -= 1;
+            RingDecreaseTimer = 0;
+        }
+        
+        // make sure we dont go negative!
+        if (pBlackboardItem->RingCount <= 0)
+        {
+            pBlackboardItem->RingCount = 0;
+            RingsToDecrease = 0;
+        }
+    }
+}
