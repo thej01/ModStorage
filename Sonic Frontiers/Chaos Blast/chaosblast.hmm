@@ -190,13 +190,13 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
             Player.Effect.PlayEffect("Chaos Blast Released", "ef_so_boost_impact_fv01") // wind effect
             Player.Effect.PlayEffect("Chaos Blast Released", "ef_ss_aura01_burst01") // some yellow particles
             Player.Effect.PlayEffect("Chaos Blast Released", "ec_ss2_bo6160_burst01_wave01") // tiny yellow circle
+            Player.Effect.PlayEffect("Chaos Blast Released", "ec_ft_damage_down01_sa01_shake01") // camera shake
             if (isSuper && !isSS2)
                 Player.Effect.PlayEffect("Chaos Blast Released", "ef_ss_hit_special01") // yellow explosion
 
             if (isSS2)
-            {
                 Player.Effect.PlayEffect("Chaos Blast Released", "ef_ss2_bo6160_burst02") // giant red and yellow explosion
-            }
+
             Player.Effect.StopEffect("Chaos Blast Charge")
         }
     }
@@ -234,7 +234,14 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
     {
         RingDecreaseTimer += DeltaTime;
 
-        if (RingDecreaseTimer > 0.032f)
+        // drain fast at the start and slow by the end.
+        // the lower the first number is the faster it drains
+        // the speed does cap at 1/30th of a second though so the counter doesnt freeze
+        float DrainNeeded = (0.6f / RingsToDecrease)
+        if (DrainNeeded < 0.032f)
+            DrainNeeded = 0.032f;
+
+        if (RingDecreaseTimer > DrainNeeded)
         {
             pBlackboardItem->RingCount -= 1;
             RingsToDecrease -= 1;
