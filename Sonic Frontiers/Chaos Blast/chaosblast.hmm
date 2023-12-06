@@ -20,7 +20,6 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
     #lib "Player"
     #lib "Reflection"
 
-
     // do not touch
     static float CollisionTimer = 0;
     static float Cooldown = 0;
@@ -42,8 +41,8 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
     // range when using Chaos Blast
 
     const float ChaosBlastRange = 85.0f;
-    const float ChaosBlastRangeSS1 = 135.0f;
-    const float ChaosBlastRangeSS2 = 200.0f;
+    const float ChaosBlastRangeSS1 = 225.0f;
+    const float ChaosBlastRangeSS2 = 300.0f;
 
     // cooldown after using Chaos Blast
     const float ChaosBlastCooldownLength = 30.0f; // 60 seconds
@@ -52,21 +51,28 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
 
     // multiplier for getting a hit to decrease Cooldown
 
-    const float ChaosBlastCooldownComboMult = 1.2f;
-    const float ChaosBlastCooldownComboMultSS1 = 1.4f;
-    const float ChaosBlastCooldownComboMultSS2 = 1.4f;
+    const float ChaosBlastCooldownComboMult = 1.5f;
+    const float ChaosBlastCooldownComboMultSS1 = 2f;
+    const float ChaosBlastCooldownComboMultSS2 = 2.2f;
 
-    // damage multiplier when using Chaos Blast
-    
-    const float ChaosBlastDamageMultiplier = 20f;
-    const float ChaosBlastDamageMultiplierSS1 = 6f; 
-    const float ChaosBlastDamageMultiplierSS2 = 8f;
+    // damage when using Chaos Blast
+
+    const int ChaosBlastDamageMin = 70;
+    const int ChaosBlastDamageMax = 75;
+
+    // super sonic stuff doesnt work yet... womp
+
+    const int ChaosBlastDamageMinSS1 = 125;
+    const int ChaosBlastDamageMaxSS1 = 130;
+
+    const int ChaosBlastDamageMinSS2 = 140;
+    const int ChaosBlastDamageMaxSS2 = 145;
 
     // amount of rings to drain when using Chaos Blast
 
-    const int ChaosBlastCost = 75;
+    const int ChaosBlastCost = 60;
     const int ChaosBlastCostSS1 = 50;
-    const int ChaosBlastCostSS2 = 35;
+    const int ChaosBlastCostSS2 = 30;
 
 //
 {
@@ -79,8 +85,10 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
 
     float rangeToUse = ChaosBlastRange;
     float cooldownLengthToUse = ChaosBlastCooldownLength;
-    float damageMultToUse = ChaosBlastDamageMultiplier;
     float comboMultToUse = ChaosBlastCooldownComboMult;
+
+    int damageToUseMin = ChaosBlastDamageMin;
+    int damageToUseMax = ChaosBlastDamageMax;
     int costToUse = ChaosBlastCost; 
 
     float DeltaTime = Time.GetDeltaTime();
@@ -108,7 +116,8 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
     {
         rangeToUse = ChaosBlastRangeSS1;
         cooldownLengthToUse = ChaosBlastCooldownLengthSS1;
-        damageMultToUse = ChaosBlastDamageMultiplierSS1;
+        damageToUseMin = ChaosBlastDamageMinSS1;
+        damageToUseMax = ChaosBlastDamageMaxSS1;
         comboMultToUse = ChaosBlastCooldownComboMultSS1;
         costToUse = ChaosBlastCostSS1;
     }
@@ -117,7 +126,8 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
     {
         rangeToUse = ChaosBlastRangeSS2;
         cooldownLengthToUse = ChaosBlastCooldownLengthSS2;
-        damageMultToUse = ChaosBlastDamageMultiplierSS2;
+        damageToUseMin = ChaosBlastDamageMinSS2;
+        damageToUseMax = ChaosBlastDamageMaxSS2;
         comboMultToUse = ChaosBlastCooldownComboMultSS2;
         costToUse = ChaosBlastCostSS2;
     }   
@@ -180,7 +190,13 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
 
             OldDamage = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.damageRate);
 
-            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.damageRate, OldDamage * damageMultToUse);
+            // randomize damage
+
+            Random RandomNum = new Random();
+
+            int randDamage = RandomNum.Next(damageToUseMin, damageToUseMax);
+
+            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.damageRate, randDamage);
 
             Player.Collision.SetCollisionSphere(Player.CollisionType.Damage, rangeToUse);
 
