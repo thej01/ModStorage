@@ -1,0 +1,3 @@
+add customlibraries.hmm
+add spinslice.hmm
+add mod.ini

@@ -1,0 +1,58 @@
+// i would NOT recommend using any of these librarys outside of this,
+// i just made this so its easier for me to code this project without a bunch of copy paste.
+
+Library "PhysicsHelpers" by "thej01"
+//
+    #lib "VectorHelpers"
+    #lib "Sonic"
+
+    #load "System.Numerics.dll"
+
+    using System.Numerics;
+
+    public static class Velocity
+    {
+        public static class Falling
+        {  
+            public static void Set(float amount = 0.0f)
+            {
+                var kinematics = Player.Kinematics.Get();
+                kinematics->Velocity.Y = amount;
+            }
+
+            public static void Change(float amount = 0.0f)
+            {
+                var kinematics = Player.Kinematics.Get();
+                kinematics->Velocity.Y += amount;
+            }
+        }  
+
+        public static class Forward
+        {
+            public static void Set(float amount = 0.0f)
+            {
+                var dir = VectorHelpers.LookRotation(Player.Kinematics.GetForward());
+                var kinematics = Player.Kinematics.Get();
+                kinematics->Velocity = VectorHelpers.GetForward(dir) * amount;
+            }
+
+            public static void Change(float amount = 0.0f)
+            {
+                var dir = VectorHelpers.LookRotation(Player.Kinematics.GetForward());
+                var kinematics = Player.Kinematics.Get();
+                kinematics->Velocity += VectorHelpers.GetForward(dir) * amount;
+            }
+        }
+
+    }
+
+    public static class Direction
+    {
+        public static void Flip()
+        {
+            var dir = VectorHelpers.LookRotation(-Player.Kinematics.GetForward());
+            var kinematics = Player.Kinematics.Get();
+            kinematics->Rotation = dir;
+        }
+    }
+//
