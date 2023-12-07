@@ -1,3 +1,6 @@
+## Chaos Blast v1.01
+- [Bugfix] - Fixed missing Library
+
 ## Chaos Blast v1.0
 - Initial Gamebanana Release
 

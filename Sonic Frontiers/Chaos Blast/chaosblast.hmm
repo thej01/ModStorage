@@ -19,6 +19,7 @@ Adds Chaos Blast to the game as a move that can be performed when Phantom Rush i
 	#lib "Sonic"
     #lib "Player"
     #lib "Reflection"
+    #lib "Time"
 
     // do not touch
     static float CollisionTimer = 0;
