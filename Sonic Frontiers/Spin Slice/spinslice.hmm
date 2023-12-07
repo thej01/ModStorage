@@ -1,5 +1,5 @@
 
-Code "Spin Slice" by "thej01" in "thej01's codes/Gameplay" does "Press jump during Sonic Boom to do a Spin Slice!\nThis code autoenables the \"Disable Spin Charge Camera\" code by Hyper."
+Code "Spin Slice" by "thej01" in "thej01's codes/Gameplay" does "Press jump during Sonic Boom to do a Spin Slice!\nAlso, if you hold X while preforming a Spin Slice, you can chain a finisher.\nThis code autoenables the Disable Spin Charge Camera code by Hyper."
 //
 
     #include "BlackboardStatus" noemit
