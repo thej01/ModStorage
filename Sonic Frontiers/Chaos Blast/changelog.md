@@ -1,3 +1,6 @@
+## Chaos Blast v1.0
+- Initial Gamebanana Release
+
 ## Public Playtest v1.2
 - [Adjustment] - Buffed Chaos Blast damage
 - [Adjustment] - Buffed cooldown decreaser
