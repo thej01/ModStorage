@@ -1,5 +1,5 @@
 
-Code "Spin Slice" by "thej01" in "thej01's codes/Gameplay" does "Press jump during Sonic Boom to do a Spin Slice!\nAlso, if you hold X while preforming a Spin Slice, you can chain a finisher.\nThis code autoenables the Disable Spin Charge Camera code by Hyper."
+Code "Spin Slice" by "thej01" in "thej01's codes/Gameplay" does "Press jump during Sonic Boom to do a Spin Slice!\nThis code autoenables the \"Disable Spin Charge Camera\" code by Hyper."
 //
 
     #include "BlackboardStatus" noemit
@@ -11,11 +11,16 @@ Code "Spin Slice" by "thej01" in "thej01's codes/Gameplay" does "Press jump duri
     #lib "VectorHelpers"
     #lib "Reflection"
     #lib "PhysicsHelpers"
-    #lib "Time"
 
     #load "System.Numerics.dll"
 
     using System.Numerics;
+
+
+    // !! THIS IS IMPORTANT TO CHANGE!
+    // if your combat mod changes hitstun, change this to fix the spin slice not working properly.
+    // 1 is base game, 2 is no hitstun.
+    static float HitStunMultiplier = 1;
 
     static bool IsSpinSlice = false;
     static bool QueueSpinSlice = false;
@@ -75,183 +80,158 @@ Code "Spin Slice" by "thej01" in "thej01's codes/Gameplay" does "Press jump duri
 
     // Spin Slice
     float deltaTime = Time.GetDeltaTime();
+    bool wasSonicBoom = Player.State.GetPreviousStateID<Sonic.StateID>() == Sonic.StateID.StateSonicBoomKick;
+    bool isJump = Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateDoubleJump || Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateJump;
 
-    if (IS_WORLD_FLAG(IsBattle))
+    if (QueueSpinSlice)
+        EnterSpinSliceTimer += deltaTime;
+
+    if (QueueSpinSlice && EnterSpinSliceTimer >= 0.016f)
     {
-        bool wasSonicBoom = Player.State.GetPreviousStateID<Sonic.StateID>() == Sonic.StateID.StateSonicBoomKick;
-        bool isJump = Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateDoubleJump || Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateJump;
+        // store players directions, so they dont move during spin slice.
 
-        if (QueueSpinSlice)
-            EnterSpinSliceTimer += deltaTime;
+        SpinSliceDir1 = VectorHelpers.LookRotation(Player.Kinematics.GetForward());
+        SpinSliceDir2 = VectorHelpers.LookRotation(-Player.Kinematics.GetForward());
 
-        if (QueueSpinSlice && EnterSpinSliceTimer >= 0.016f)
+
+        IsSpinSlice = true;
+        CurSpinSliceAmount = 0;
+        PhysicsHelpers.Velocity.Forward.Set(175.0f);
+
+        // play effects
+
+        Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_accelerator_aura01_lightning02") // lightning explosion
+        Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_accelerator_aura01_par02") // tiny looping particles
+        Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_accelerator_aura01_par01") // particle trail
+        Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_psycho_aura01_linepar01") // blue trail
+
+        // store old knockback values
+
+        SpinDashKnockbackX = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.X);
+        SpinDashKnockbackY = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Y);
+        SpinDashKnockbackZ = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Z);
+
+        // nerf knockback so the enemy doesnt go flying
+
+        RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.X, 0f);
+        RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Y, 2f);
+        RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Z, 0f);
+
+        SpinSliceGetClose = false;
+        SpinSliceFinishMove = 0;
+
+        Player.State.SetState<Sonic.StateID>(Sonic.StateID.StateSpinBoostCharge);
+    }
+
+    if (wasSonicBoom && isJump && !QueueSpinSlice)
+    {
+        // we gotta delay it by 1/60th of a second, or the initial velocity isnt applied for some reason.
+        // probably has no issues..
+        EnterSpinSliceTimer = 0;
+        QueueSpinSlice = true;
+    }
+
+
+    if (Player.State.GetCurrentStateID<Sonic.StateID>() != Sonic.StateID.StateHomingFinish)
+    {
+        if (ResetFinisherHitbox)
         {
-            // store players directions, so they dont move during spin slice.
-
-            SpinSliceDir1 = VectorHelpers.LookRotation(Player.Kinematics.GetForward());
-            SpinSliceDir2 = VectorHelpers.LookRotation(-Player.Kinematics.GetForward());
-
-
-            IsSpinSlice = true;
-            CurSpinSliceAmount = 0;
-            PhysicsHelpers.Velocity.Forward.Set(175.0f);
-
-            // play effects
-
-            Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_accelerator_aura01_lightning02") // lightning explosion
-            Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_accelerator_aura01_par02") // tiny looping particles
-            Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_accelerator_aura01_par01") // particle trail
-            Player.Effect.PlayEffect("Spin Slice", "ec_so_skill_psycho_aura01_linepar01") // blue trail
-
-            // store old knockback values
-
-            SpinDashKnockbackX = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.X);
-            SpinDashKnockbackY = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Y);
-            SpinDashKnockbackZ = RFL_GET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Z);
-
-            // nerf knockback so the enemy doesnt go flying
-
-            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.X, 0f);
-            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Y, 2f);
-            RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Z, 0f);
-
-            SpinSliceGetClose = false;
-            SpinSliceFinishMove = 0;
-
-            Player.State.SetState<Sonic.StateID>(Sonic.StateID.StateSpinBoostCharge);
-        }
-
-        if (wasSonicBoom && isJump && !QueueSpinSlice)
-        {
-            // we gotta delay it by 1/60th of a second, or the initial velocity isnt applied for some reason.
-            // probably has no issues..
-            EnterSpinSliceTimer = 0;
-            QueueSpinSlice = true;
-        }
-
-
-        if (Player.State.GetCurrentStateID<Sonic.StateID>() != Sonic.StateID.StateHomingFinish)
-        {
-            if (ResetFinisherHitbox)
-            {
-                ResetFinisherHitbox = false;
-                RFL_SET_PARAM(SonicParametersInfo, common.comboFinishSet.sonic.hit.shapeSize, OldFinisherHitboxSize);
-            }
-        }
-        
-        if (Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateSpinBoostCharge)
-        {
-            if (IsSpinSlice)
-            {
-                var kinematics = Player.Kinematics.Get();
-
-                // lock player in 2 directions
-
-                if ((CurSpinSliceAmount % 2) == 0)
-                    kinematics->Rotation = SpinSliceDir1;
-                else
-                    kinematics->Rotation = SpinSliceDir2;
-
-                QueueSpinSlice = false;
-
-                // slow down over time
-
-                float slowDown = -225f;
-                float speedNeededToTurn = 100f
-                if (SpinSliceGetClose)
-                {
-                    slowDown = -175f;
-                    speedNeededToTurn = 55f;
-                }
-
-                PhysicsHelpers.Velocity.Forward.Change(slowDown * deltaTime)
-
-                // make sure the player doesnt fall while doing spin slice
-
-                PhysicsHelpers.Velocity.Falling.Set(0.0f);
-
-                if (Math.Abs(Player.Kinematics.GetHorizontalMagnitude()) <= speedNeededToTurn)
-                {
-                    ++CurSpinSliceAmount;
-
-                    if (CurSpinSliceAmount >= TotalSpinSliceAmount)
-                    {
-                        if (SpinSliceGetClose)
-                        {
-                            // resize hitbox because sonic doesnt like to go near enemy (bruh)
-                            OldFinisherHitboxSize = RFL_GET_PARAM(SonicParametersInfo, common.comboFinishSet.sonic.hit.shapeSize);
-                            RFL_SET_PARAM(SonicParametersInfo, common.comboFinishSet.sonic.hit.shapeSize, NewFinisherHitboxSize);
-
-                            ResetFinisherHitbox = true;
-
-                            // use finisher now
-                            Player.State.SetState<Sonic.StateID>(SpinSliceFinishMove)
-                            return;
-                        }
-
-                        if (SpinSliceFinishMove == 0)
-                        {
-                            // end slice
-                            Player.State.SetState<Sonic.StateID>(Sonic.StateID.StateHomingFinished)
-                            PhysicsHelpers.Velocity.Falling.Set(25.0f);
-                            return;
-                        }
-                        else
-                        {
-                            // get a little closer...
-                            SpinSliceGetClose = true;
-                            PhysicsHelpers.Direction.Flip();
-                            PhysicsHelpers.Velocity.Forward.Set(75.0f);
-                            return;
-                        }   
-
-                    }
-
-                    if (CurSpinSliceAmount >= (TotalSpinSliceAmount - 1))
-                    {
-                        // restore knockback (doesnt seem to work though, lol)
-
-                        RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.X, SpinDashKnockbackX);
-                        RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Y, SpinDashKnockbackY);
-                        RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Z, SpinDashKnockbackZ);
-
-                        SpinSliceFindEndMoves();
-                    }
-
-                    // turn around
-
-                    PhysicsHelpers.Direction.Flip();
-                    PhysicsHelpers.Velocity.Forward.Set(175.0f);
-                }
-            }
-        }
-        else
-        {
-            // remove effects and disable slice
-
-            Player.Effect.StopEffect("Spin Slice")
-            IsSpinSlice = false;
+            ResetFinisherHitbox = false;
+            RFL_SET_PARAM(SonicParametersInfo, common.comboFinishSet.sonic.hit.shapeSize, OldFinisherHitboxSize);
         }
     }
-}
+    
+    if (Player.State.GetCurrentStateID<Sonic.StateID>() == Sonic.StateID.StateSpinBoostCharge)
+    {
+        if (IsSpinSlice)
+        {
+            var kinematics = Player.Kinematics.Get();
 
-Patch "Disable Spin Charge Camera" in "Camera" by "Hyper" does 
-/*
-Disables the zoom camera when charging a Spin Dash.
+            // lock player in 2 directions
 
-Notes;
-- It is recommended that you use this with Increased Spin Charge Rotation Speed.
-*/
-{
-    WriteNop
-    (
-        /* 0x1408A67DC */
-        ScanSignature
-        (
-            "\xE8\xCC\xCC\xCC\xCC\x48\x8B\xCF\xBB\x24\x00\x00\x00",
-            "x????xxxxxxxx"
-        ),
+            if ((CurSpinSliceAmount % 2) == 0)
+                kinematics->Rotation = SpinSliceDir1;
+            else
+                kinematics->Rotation = SpinSliceDir2;
 
-        5
-    );
+            QueueSpinSlice = false;
+
+            // slow down over time
+
+            float slowDown = -225f;
+            float speedNeededToTurn = 100f
+            if (SpinSliceGetClose)
+            {
+                slowDown = -175f;
+                speedNeededToTurn = 55f;
+            }
+
+            PhysicsHelpers.Velocity.Forward.Change((slowDown * HitStunMultiplier) * deltaTime)
+
+            // make sure the player doesnt fall while doing spin slice
+
+            PhysicsHelpers.Velocity.Falling.Set(0.0f);
+
+            if (Math.Abs(Player.Kinematics.GetHorizontalMagnitude()) <= speedNeededToTurn)
+            {
+                ++CurSpinSliceAmount;
+
+                if (CurSpinSliceAmount >= TotalSpinSliceAmount)
+                {
+                    if (SpinSliceGetClose)
+                    {
+                        // resize hitbox because sonic doesnt like to go near enemy (bruh)
+                        OldFinisherHitboxSize = RFL_GET_PARAM(SonicParametersInfo, common.comboFinishSet.sonic.hit.shapeSize);
+                        RFL_SET_PARAM(SonicParametersInfo, common.comboFinishSet.sonic.hit.shapeSize, NewFinisherHitboxSize);
+
+                        ResetFinisherHitbox = true;
+
+                        // use finisher now
+                        Player.State.SetState<Sonic.StateID>(SpinSliceFinishMove)
+                        return;
+                    }
+
+                    if (SpinSliceFinishMove == 0)
+                    {
+                        // end slice
+                        Player.State.SetState<Sonic.StateID>(Sonic.StateID.StateHomingFinished)
+                        PhysicsHelpers.Velocity.Falling.Set(25.0f);
+                        return;
+                    }
+                    else
+                    {
+                        // get a little closer...
+                        SpinSliceGetClose = true;
+                        PhysicsHelpers.Direction.Flip();
+                        PhysicsHelpers.Velocity.Forward.Set(75.0f);
+                        return;
+                    }   
+
+                }
+
+                if (CurSpinSliceAmount >= (TotalSpinSliceAmount - 1))
+                {
+                    // restore knockback (doesnt seem to work though, lol)
+
+                    RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.X, SpinDashKnockbackX);
+                    RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Y, SpinDashKnockbackY);
+                    RFL_SET_PARAM(SonicParametersInfo, common.commonPackage.attack.spinDash.velocity.Z, SpinDashKnockbackZ);
+
+                    SpinSliceFindEndMoves();
+                }
+
+                // turn around
+
+                PhysicsHelpers.Direction.Flip();
+                PhysicsHelpers.Velocity.Forward.Set(175.0f);
+            }
+        }
+    }
+    else
+    {
+        // remove effects and disable slice
+
+        Player.Effect.StopEffect("Spin Slice")
+        IsSpinSlice = false;
+    }
 }
