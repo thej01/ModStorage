@@ -1,3 +1,6 @@
+## v1.0
+- Initial Release
+
 ## Public Playtest v1.1
 - [Refactor] - Code cleanup and hitstop modification support.
 
