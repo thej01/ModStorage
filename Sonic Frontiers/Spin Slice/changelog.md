@@ -1,3 +1,6 @@
+## v1.01
+- [Bugfix] - Fix missing library FOR REAL THIS TIME
+
 ## v1.0
 - Initial Release
 
